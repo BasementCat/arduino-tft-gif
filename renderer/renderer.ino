@@ -207,22 +207,22 @@ void render_anim() {
         break;
       case CMD_PIX_RAW:
         // Raw pixel data - already 5-6-5 encoded
-        buf_pos = sizeof(buf);
-        for (px_i = 0; px_i < cmd.arg; px_i++) {
-          if (buf_pos >= (sizeof(buf) / 2)) {
-            buf_read = min(sizeof(buf), (cmd.arg - px_i) * 2);
-            fp.read(buf, buf_read);
-            buf_pos = 0;
-          }
-          tft.pushColor(buf[buf_pos++]);
+        px_i = 0;
+        while (px_i < cmd.arg) {
+          buf_read = min(sizeof(buf), (cmd.arg - px_i) * 2);
+          fp.read(buf, buf_read);
+          tft.startWrite();
+          tft.writePixels(buf, buf_read / 2);
+          tft.endWrite();
+          buf_pos += buf_read;
+          px_i += buf_read / 2;
         }
         break;
       case CMD_PIX_RLE:
         fp.read(buf, 2);
-        // TODO: push multiple pixels at a time?
-        for (px_i = 0; px_i < cmd.arg; px_i++) {
-          tft.pushColor(buf[0]);
-        }
+        tft.startWrite();
+        tft.writeColor(buf[0], cmd.arg);
+        tft.endWrite();
         break;
       case CMD_SEEK:
         // Seek (ignore arg, data 2b x, 2b y)
