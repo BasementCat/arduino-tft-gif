@@ -172,7 +172,6 @@ class AnimImgV2(AnimImg):
 
     def get_commands(self):
         for filename in self.filenames:
-            # TODO: actually do loop count
             yield struct.pack(self.COMMAND_FMT, self.CMD_START_SET, 0)
             for _, duration, frame in self.get_frames(filename):
                 frame = self.crop_resize_img(frame)
@@ -194,6 +193,9 @@ class AnimImgV2(AnimImg):
                 # End of img in set
                 yield struct.pack(self.COMMAND_FMT, self.CMD_END_IMG, 0)
                 # Delay
+                while duration > 255:
+                    yield struct.pack(self.COMMAND_FMT, self.CMD_DELAY, 255)
+                    duration -= 255
                 yield struct.pack(self.COMMAND_FMT, self.CMD_DELAY, duration)
             # End of set
             yield struct.pack(self.COMMAND_FMT, self.CMD_END_SET, 0)
@@ -201,78 +203,12 @@ class AnimImgV2(AnimImg):
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Pack multiple images or animated gifs into a format suitable for arduino")
-    parser.add_argument('filename', help="GIF filename to extract")
-    parser.add_argument('-o', '--output', help="Output directory, will be created if it does not exist, will be overwritten if it does")
-    parser.add_argument('-l', '--loop', type=int, help="Override loop count, 0 to loop forever, -1 to not loop")
+    parser.add_argument('-o', '--output', default='main.anim', help="Output file, will be created if it does not exist, will be overwritten if it does")
+    parser.add_argument('filenames', nargs='*', help="Image/GIF filenames to extract")
     return parser.parse_args()
 
 
-# def main(filename, output=None, loop=None):
-#     gif = Image.open(filename)
-#     w, h = gif.size
-#     if w != h:
-#         logger.warning("GIF is not square, it will be cropped")
-#         if w > h:
-#             crop = (
-#                 int((w - h) / 2),
-#                 0,
-#                 int((w - h) / 2) + h,
-#                 h,
-#             )
-#         else:
-#             crop = (
-#                 0,
-#                 int((h - w) / 2),
-#                 w,
-#                 int((h - w) / 2) + w,
-#             )
-
-#     meta = {
-#         'n_frames': gif.n_frames,
-#         'loop': gif.info['loop'] if loop is None else loop,
-#         'durations': []
-#     }
-
-#     logger.info("%s: %dx%d, %d frames, loop %s",
-#         filename, w, h, gif.n_frames,
-#         'never' if meta['loop'] == -1 else ('forever' if meta['loop'] == 0 else (str(meta['loop']) + ' times'))
-#         )
-
-#     if output:
-#         if os.path.exists(output):
-#             logger.warning("Removing output folder %s", output)
-#             shutil.rmtree(output)
-#         logger.debug("Making output folder %s", output)
-#         os.makedirs(output)
-
-#     for frame_num in range(gif.n_frames):
-#         gif.seek(frame_num)
-#         duration = gif.info['duration']
-#         meta['durations'].append(duration)
-#         logger.info("Frame %d %dms", frame_num, duration)
-#         logger.debug("Convert to RGB")
-#         frame = gif.convert('RGB')
-#         if w != h:
-#             logger.debug("Crop")
-#             frame = frame.crop(crop)
-
-#         logger.debug("Resize to 100x100")
-#         frame = frame.resize((100, 100))
-
-#         if output:
-#             out_filename = os.path.join(output, '{:08d}.bmp'.format(frame_num))
-#             logger.debug("Writing frame to %s", out_filename)
-#             frame.save(out_filename)
-
-#     if output:
-#         logger.info("Writing meta")
-#         with open(os.path.join(output, 'meta.bin'), 'wb') as fp:
-#             fp.write(struct.pack('<Hh', meta['n_frames'], meta['loop']))
-#             for d in meta['durations']:
-#                 fp.write(struct.pack('<H', d))
-
-
 if __name__ == '__main__':
-    # args = parse_args()
-    out = AnimImgV2((128, 128), ['ball.gif'], 'main.anim')
+    args = parse_args()
+    out = AnimImgV2((128, 128), args.filenames, args.output)
     out.write()

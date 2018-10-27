@@ -134,7 +134,7 @@ void render_anim() {
   Header header;
   Command cmd;
   uint8_t loop_max;
-  uint16_t buf[30], buf_pos = 30, buf_read = 0, px_i, loop_counter;
+  uint16_t buf[50], buf_pos = 50, buf_read = 0, px_i, loop_counter;
   uint32_t data_start, img_set_start = 0, img_start_time = 0;
   int32_t time_to_delay;
 
