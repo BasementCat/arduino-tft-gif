@@ -15,15 +15,14 @@
 
 #define SD_CS    4  // Chip select line for SD card
 
+
 // For 0.96", 1.44" and 1.8" TFT with ST7735 use
 Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS,  TFT_DC, TFT_RST);
 
 void setup(void) {
   Serial.begin(9600);
 
-  while (!Serial) {
-    delay(10);  // wait for serial console
-  }
+  Serial.println("Starting up...");
 
   pinMode(TFT_CS, OUTPUT);
   digitalWrite(TFT_CS, HIGH);
@@ -133,6 +132,7 @@ void render_anim() {
   Magic magic;
   Header header;
   Command cmd;
+
   uint8_t loop_max;
   uint16_t buf[50], buf_pos = 50, buf_read = 0, px_i, loop_counter;
   uint32_t data_start, img_set_start = 0, img_start_time = 0;
@@ -175,7 +175,7 @@ void render_anim() {
     //   loop_counter = 0;
     //   Serial.print("Img set start, loop max ");Serial.println(loop_max);
     // }
-    fp.read((uint8_t *)&cmd, sizeof(cmd));
+    fp.read(cmd, sizeof(cmd));
     // Serial.print("Command: ");Serial.print(cmd.cmd);
     // Serial.print(", Arg: ");Serial.println(cmd.arg);
     switch (cmd.cmd) {
