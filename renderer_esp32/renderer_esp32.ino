@@ -86,11 +86,6 @@
 // Unused for now
 // #define TFT_BL  99  // TFT backlight PWM line
 
-// TFT info
-// For 0.96", 1.44" and 1.8" TFT with ST7735 use
-#define TFT_CLS     Adafruit_ST7735
-#define TFT_INIT    INITR_144GREENTAB
-
 #define DISPLAY_TIME_SECONDS 10
 
 /* template parameters are maxGifWidth, maxGifHeight, lzwMaxBits
@@ -101,7 +96,7 @@
  */
 // GifDecoder<128, 128, 12> decoder = GifDecoder<128, 128, 12>();
 GifDecoder<128, 128, 12> decoder;
-TFT_CLS tft = TFT_CLS(TFT_CS,  TFT_DC, TFT_RST);
+Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS,  TFT_DC, TFT_RST);
 
 #define GIF_DIRECTORY "/gifs"
 
@@ -138,14 +133,15 @@ void setup() {
     pinMode(SD_CS, OUTPUT);
     digitalWrite(SD_CS, HIGH);
 
-    tft.initR(TFT_INIT);
+    // For 0.96", 1.44" and 1.8" TFT with ST7735 use
+    tft.initR(INITR_144GREENTAB);
 
     tft.fillScreen(ST77XX_BLUE);
 
     Serial.print("Initializing SD card...");
     if (!SD.begin(SD_CS)) {
         Serial.println("failed!");
-        return;
+        die("Failed to initialize SD card");
     }
     Serial.println("OK!");
 
@@ -155,12 +151,12 @@ void setup() {
 
     if(num_files < 0) {
         Serial.println("No gifs directory");
-        while(1);
+        die("No /gifs directory");
     }
 
     if(!num_files) {
         Serial.println("Empty gifs directory");
-        while(1);
+        die("No files in /gifs");
     }
 }
 
