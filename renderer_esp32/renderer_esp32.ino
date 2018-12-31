@@ -86,6 +86,11 @@
 // Unused for now
 // #define TFT_BL  99  // TFT backlight PWM line
 
+// Buttons - will use these later
+// #define BTN_L   4
+// #define BTN_M   25
+// #define BTN_R   26
+
 #define DISPLAY_TIME_SECONDS 10
 
 /* template parameters are maxGifWidth, maxGifHeight, lzwMaxBits
@@ -170,7 +175,7 @@ void loop() {
             gifindex = 0;
         }
 
-        char pathname[30];
+        char pathname[128];
 
         getGIFFilenameByIndex(GIF_DIRECTORY, gifindex, pathname);
 
