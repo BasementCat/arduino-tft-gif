@@ -13,13 +13,15 @@ typedef struct {
 
 class MenuRenderer {
     public:
-        MenuRenderer(Adafruit_ST7735* tft_ptr) {
+        MenuRenderer(Adafruit_ST7735* tft_ptr, Buttons* buttons_ptr) {
             tft = tft_ptr;
+            buttons = buttons_ptr;
         }
 
         int render(const char** items_text, int item_count) {
             MenuItem items[item_count];
             int i, y_offset;
+            uint32_t next_render;
 
             tft->fillScreen(ST77XX_BLACK);
             tft->drawRoundRect(1, 1 + top_offset, width - 1, (height - btm_offset) - 1, 4, color);
@@ -30,7 +32,7 @@ class MenuRenderer {
             tft->setTextColor(0xffff, 0x0000);
             tft->setTextSize(1);
 
-            for (int i = 0; i < item_count; i++) {
+            for (i = 0; i < item_count; i++) {
                 items[i].text = items_text[i];
                 items[i].selected = (i == 0 ? true : false);
                 items[i].schar = 0;
@@ -40,15 +42,45 @@ class MenuRenderer {
 
             while (true) {
                 y_offset = margin + top_offset;
-                for (int i = 0; i < item_count; i++) {
+                for (i = 0; i < item_count; i++) {
                     y_offset = render_text(y_offset, &items[i]);
                 }
-                delay(250);
+                next_render = millis() + 250;
+                while (millis() < next_render) {
+                    buttons->check();
+                    if (buttons->l_btn()) {
+                        for (i = item_count - 1; i >= 0; i--) {
+                            if (items[i].selected) {
+                                if (i > 0) {
+                                    items[i].selected = false;
+                                    items[i - 1].selected = true;
+                                    break;
+                                }
+                            }
+                        }
+                        while (buttons->l_btn());
+                        next_render = 0;
+                    }
+                    if (buttons->r_btn()) {
+                        for (i = 0; i < item_count; i++) {
+                            if (items[i].selected) {
+                                if (i + 1 < item_count) {
+                                    items[i].selected = false;
+                                    items[i + 1].selected = true;
+                                    break;
+                                }
+                            }
+                        }
+                        while (buttons->r_btn());
+                        next_render = 0;
+                    }
+                }
             }
         }
 
     private:
         Adafruit_ST7735* tft;
+        Buttons* buttons;
         // TODO: get color, w, h, etc elsewhere
         uint16_t color = 0xC81F;
         uint16_t width = 128, height = 128;

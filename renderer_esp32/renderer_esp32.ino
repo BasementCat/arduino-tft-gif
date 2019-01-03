@@ -216,7 +216,7 @@ int gifindex = 0;
 // }
 
 void loop() {
-    MenuRenderer m = MenuRenderer(&tft);
+    MenuRenderer m = MenuRenderer(&tft, &buttons);
     const char * text[] = {
         "First entry",
         "Second entry",
