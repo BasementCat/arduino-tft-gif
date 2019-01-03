@@ -76,6 +76,8 @@
 #include <SD.h>
 #include "GifDecoder.h"
 #include "FilenameFunctions.h"
+#include "Buttons_impl.h"
+#include "Menu_impl.h"
 
 // Definitions of pin numbers for the TFT
 // SPI pins are hardware and do not need to be defined
@@ -87,9 +89,9 @@
 // #define TFT_BL  99  // TFT backlight PWM line
 
 // Buttons - will use these later
-// #define BTN_L   4
-// #define BTN_M   25
-// #define BTN_R   26
+#define BTN_L   4
+#define BTN_M   25
+#define BTN_R   26
 
 #define DISPLAY_TIME_SECONDS 10
 
@@ -102,6 +104,7 @@
 // GifDecoder<128, 128, 12> decoder = GifDecoder<128, 128, 12>();
 GifDecoder<128, 128, 12> decoder;
 Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS,  TFT_DC, TFT_RST);
+Buttons buttons = Buttons(BTN_L, BTN_M, BTN_R);
 
 #define GIF_DIRECTORY "/gifs"
 
@@ -109,12 +112,12 @@ int num_files;
 uint16_t screen[16384];
 
 void screenClearCallback(void) {
-    Serial.println("clear");
+    // Serial.println("clear");
     tft.fillScreen(ST77XX_BLACK);
 }
 
 void updateScreenCallback(void) {
-    Serial.println("update");
+    // Serial.println("update");
     tft.startWrite();
     tft.writePixels(screen, 16384);
     tft.endWrite();
@@ -167,36 +170,61 @@ void setup() {
 
 int gifindex = 0;
 
+// void loop() {
+//     static unsigned long futureTime;
+//     static int change_gif = 0;
+
+//     change_gif = change_gif ?: (futureTime < millis() ? 1 : 0);
+//     if(change_gif != 0) {
+//         gifindex += change_gif;
+//         if (gifindex < 0) gifindex = num_files - 1;
+//         if (gifindex >= num_files) gifindex = 0;
+//         change_gif = 0;
+
+//         char pathname[128];
+
+//         getGIFFilenameByIndex(GIF_DIRECTORY, gifindex, pathname);
+
+//         if (decoder.openGifFilename(pathname) == 0) {
+//             decoder.startDecoding();
+//             futureTime = millis() + (DISPLAY_TIME_SECONDS * 1000);
+//         }
+
+//         // if (openGifFilenameByIndex(GIF_DIRECTORY, gifindex) >= 0) {
+//         //     // Can clear screen for new animation here, but this might cause flicker with short animations
+//         //     // matrix.fillScreen(COLOR_BLACK);
+//         //     // matrix.swapBuffers();
+
+//         //     decoder.startDecoding();
+
+//         //     // Calculate time in the future to terminate animation
+//         //     futureTime = millis() + (DISPLAY_TIME_SECONDS * 1000);
+//         // }
+//     }
+
+//     decoder.decodeFrame();
+
+//     buttons.check();
+//     if (buttons.l_btn()) {
+//         change_gif = -1;
+//         while (buttons.l_btn());
+//     }
+//     if (buttons.r_btn()) {
+//         change_gif = 1;
+//         while (buttons.r_btn());
+//     }
+// }
+
 void loop() {
-    static unsigned long futureTime;
-
-    if(futureTime < millis()) {
-        if (++gifindex >= num_files) {
-            gifindex = 0;
-        }
-
-        char pathname[128];
-
-        getGIFFilenameByIndex(GIF_DIRECTORY, gifindex, pathname);
-
-        if (decoder.openGifFilename(pathname) == 0) {
-            decoder.startDecoding();
-            futureTime = millis() + (DISPLAY_TIME_SECONDS * 1000);
-        }
-
-        // if (openGifFilenameByIndex(GIF_DIRECTORY, gifindex) >= 0) {
-        //     // Can clear screen for new animation here, but this might cause flicker with short animations
-        //     // matrix.fillScreen(COLOR_BLACK);
-        //     // matrix.swapBuffers();
-
-        //     decoder.startDecoding();
-
-        //     // Calculate time in the future to terminate animation
-        //     futureTime = millis() + (DISPLAY_TIME_SECONDS * 1000);
-        // }
-    }
-
-    decoder.decodeFrame();
+    MenuRenderer m = MenuRenderer(&tft);
+    const char * text[] = {
+        "First entry",
+        "Second entry",
+        "Third entry",
+        "Fourth really super long entry that won't fit",
+    };
+    m.render((const char **)text, 4);
+    delay(10000);
 }
 
 
