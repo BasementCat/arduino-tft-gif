@@ -22,6 +22,7 @@ class MenuRenderer {
             MenuItem items[item_count];
             int i, y_offset;
             uint32_t next_render;
+            bool selection_changed = true;
 
             tft->fillScreen(ST77XX_BLACK);
             tft->drawRoundRect(1, 1 + top_offset, width - 1, (height - btm_offset) - 1, 4, color);
@@ -43,8 +44,12 @@ class MenuRenderer {
             while (true) {
                 y_offset = margin + top_offset;
                 for (i = 0; i < item_count; i++) {
+                    if (selection_changed) {
+                        tft->fillRect(margin - 1, y_offset, (width - margin) - 1, items[i].height, items[i].selected ? color : 0);
+                    }
                     y_offset = render_text(y_offset, &items[i]);
                 }
+                selection_changed = false;
                 next_render = millis() + 250;
                 while (millis() < next_render) {
                     buttons->check();
@@ -60,6 +65,7 @@ class MenuRenderer {
                         }
                         while (buttons->l_btn());
                         next_render = 0;
+                        selection_changed = true;
                     }
                     if (buttons->r_btn()) {
                         for (i = 0; i < item_count; i++) {
@@ -73,6 +79,7 @@ class MenuRenderer {
                         }
                         while (buttons->r_btn());
                         next_render = 0;
+                        selection_changed = true;
                     }
                 }
             }
