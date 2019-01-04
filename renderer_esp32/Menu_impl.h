@@ -81,6 +81,12 @@ class MenuRenderer {
                         next_render = 0;
                         selection_changed = true;
                     }
+                    if (buttons->m_btn()) {
+                        while (buttons->m_btn());
+                        for (i = 0; i < item_count; i++) {
+                            if (items[i].selected) return i;
+                        }
+                    }
                 }
             }
         }
