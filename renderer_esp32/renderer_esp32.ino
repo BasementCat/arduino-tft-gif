@@ -170,52 +170,53 @@ void setup() {
 
 int gifindex = 0;
 
-// void loop() {
-//     static unsigned long futureTime;
-//     static int change_gif = 0;
-
-//     change_gif = change_gif ?: (futureTime < millis() ? 1 : 0);
-//     if(change_gif != 0) {
-//         gifindex += change_gif;
-//         if (gifindex < 0) gifindex = num_files - 1;
-//         if (gifindex >= num_files) gifindex = 0;
-//         change_gif = 0;
-
-//         char pathname[128];
-
-//         getGIFFilenameByIndex(GIF_DIRECTORY, gifindex, pathname);
-
-//         if (decoder.openGifFilename(pathname) == 0) {
-//             decoder.startDecoding();
-//             futureTime = millis() + (DISPLAY_TIME_SECONDS * 1000);
-//         }
-
-//         // if (openGifFilenameByIndex(GIF_DIRECTORY, gifindex) >= 0) {
-//         //     // Can clear screen for new animation here, but this might cause flicker with short animations
-//         //     // matrix.fillScreen(COLOR_BLACK);
-//         //     // matrix.swapBuffers();
-
-//         //     decoder.startDecoding();
-
-//         //     // Calculate time in the future to terminate animation
-//         //     futureTime = millis() + (DISPLAY_TIME_SECONDS * 1000);
-//         // }
-//     }
-
-//     decoder.decodeFrame();
-
-//     buttons.check();
-//     if (buttons.l_btn()) {
-//         change_gif = -1;
-//         while (buttons.l_btn());
-//     }
-//     if (buttons.r_btn()) {
-//         change_gif = 1;
-//         while (buttons.r_btn());
-//     }
-// }
-
 void loop() {
+    static unsigned long futureTime;
+    static int change_gif = 0;
+
+    change_gif = change_gif ?: (futureTime < millis() ? 1 : 0);
+    if(change_gif != 0) {
+        gifindex += change_gif;
+        if (gifindex < 0) gifindex = num_files - 1;
+        if (gifindex >= num_files) gifindex = 0;
+        change_gif = 0;
+
+        char pathname[128];
+
+        getGIFFilenameByIndex(GIF_DIRECTORY, gifindex, pathname);
+
+        if (decoder.openGifFilename(pathname) == 0) {
+            decoder.startDecoding();
+            futureTime = millis() + (DISPLAY_TIME_SECONDS * 1000);
+        }
+
+        // if (openGifFilenameByIndex(GIF_DIRECTORY, gifindex) >= 0) {
+        //     // Can clear screen for new animation here, but this might cause flicker with short animations
+        //     // matrix.fillScreen(COLOR_BLACK);
+        //     // matrix.swapBuffers();
+
+        //     decoder.startDecoding();
+
+        //     // Calculate time in the future to terminate animation
+        //     futureTime = millis() + (DISPLAY_TIME_SECONDS * 1000);
+        // }
+    }
+
+    decoder.decodeFrame();
+
+    buttons.check();
+    if (buttons.l_btn()) {
+        change_gif = -1;
+    }
+    if (buttons.r_btn()) {
+        change_gif = 1;
+    }
+    if (buttons.m_btn()) {
+        main_menu();
+    }
+}
+
+void main_menu() {
     MenuRenderer m = MenuRenderer(&tft, &buttons);
     const char * text[] = {
         "First entry",
@@ -223,8 +224,7 @@ void loop() {
         "Third entry",
         "Fourth really super long entry that won't fit",
     };
-    m.render((const char **)text, 4);
-    delay(10000);
+    Serial.println(m.render((const char **)text, 4));
 }
 
 

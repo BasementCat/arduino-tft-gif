@@ -63,7 +63,6 @@ class MenuRenderer {
                                 }
                             }
                         }
-                        while (buttons->l_btn());
                         next_render = 0;
                         selection_changed = true;
                     }
@@ -77,14 +76,18 @@ class MenuRenderer {
                                 }
                             }
                         }
-                        while (buttons->r_btn());
                         next_render = 0;
                         selection_changed = true;
                     }
                     if (buttons->m_btn()) {
-                        while (buttons->m_btn());
                         for (i = 0; i < item_count; i++) {
-                            if (items[i].selected) return i;
+                            if (items[i].selected) {
+                                // For some reason simply resetting the address window doesn't work here
+                                // This does appear to "reset" though, and because the image is decoded into a buffer first
+                                // there's no drawing of partial frames after returning from the menu
+                                tft->fillScreen(ST77XX_BLACK);
+                                return i;
+                            }
                         }
                     }
                 }
