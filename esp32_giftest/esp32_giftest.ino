@@ -59,6 +59,7 @@ typedef struct {
 } __attribute__ ((packed)) Header;
 
 typedef struct {
+    uint32_t data_sz;
     uint16_t width;
     uint16_t height;
     uint16_t x_off;
@@ -88,7 +89,7 @@ void loop() {
         die("Failed to open file");
     }
 
-    fp.read((uint8_t*) &header, 15);
+    fp.read((uint8_t*) &header, sizeof(Header));
 
     // Serial.print("file:magic=");Serial.println(header.magic);
     // Serial.print("file:version=");Serial.println(header.version);
@@ -120,7 +121,7 @@ void loop() {
         has_trans = false;
         fx = 0;
         fy = 0;
-        fp.read((uint8_t*) &frame, 11);
+        fp.read((uint8_t*) &frame, sizeof(Frame));
         // Serial.print("frame:width=");Serial.println(frame.width);
         // Serial.print("frame:height=");Serial.println(frame.height);
         // Serial.print("frame:x_off=");Serial.println(frame.x_off);
@@ -134,7 +135,7 @@ void loop() {
         }
         while (1) {
             read_pixels = 0;
-            fp.read((uint8_t*) &chunk, 3);
+            fp.read((uint8_t*) &chunk, sizeof(Chunk));
             if (chunk.flags & 0x40) {
                 break;
             }
