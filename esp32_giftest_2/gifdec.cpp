@@ -14,17 +14,6 @@
 #define MIN(A, B) ((A) < (B) ? (A) : (B))
 #define MAX(A, B) ((A) > (B) ? (A) : (B))
 
-typedef struct Entry {
-    uint16_t length;
-    uint16_t prefix;
-    uint8_t  suffix;
-} Entry;
-
-typedef struct Table {
-    int bulk;
-    int nentries;
-    Entry *entries;
-} Table;
 
 static uint16_t
 read_num(File* fd)
@@ -92,6 +81,7 @@ gd_open_gif(File* fd)
     if (gif->bgindex)
         memset(gif->frame, gif->bgindex, gif->width * gif->height);
     gif->anim_start = fd->position();
+    gif->table = new_table();
     goto ok;
 fail:
 ok:
@@ -218,20 +208,32 @@ read_ext(gd_GIF *gif)
     }
 }
 
-static Table *
-new_table(int key_size)
+static gd_Table *
+new_table()
 {
-    int key;
-    int init_bulk = MAX(1 << (key_size + 1), 0x100);
-    Table *table = (Table*) malloc(sizeof(*table) + sizeof(Entry) * init_bulk);
-    if (table) {
-        table->bulk = init_bulk;
-        table->nentries = (1 << key_size) + 2;
-        table->entries = (Entry *) &table[1];
-        for (key = 0; key < (1 << key_size); key++)
-            table->entries[key] = (Entry) {1, 0xFFF, key};
-    }
+    // int key;
+    // int init_bulk = MAX(1 << (key_size + 1), 0x100);
+    // Table *table = (Table*) malloc(sizeof(*table) + sizeof(Entry) * init_bulk);
+    // if (table) {
+    //     table->bulk = init_bulk;
+    //     table->nentries = (1 << key_size) + 2;
+    //     table->entries = (Entry *) &table[1];
+    //     for (key = 0; key < (1 << key_size); key++)
+    //         table->entries[key] = (Entry) {1, 0xFFF, key};
+    // }
+    // return table;
+    gd_Table* table = (gd_Table*) malloc(sizeof(gd_Table) + (sizeof(gd_Entry) * 4096));
+    table->entries = (gd_Entry*) &table[1];
     return table;
+}
+
+static void
+reset_table(gd_Table* table, int key_size)
+{
+    table->nentries = (1 << key_size) + 2;
+    for (int key = 0; key < (1 << key_size); key++) {
+        table->entries[key] = (gd_Entry) {1, 0xFFF, key};
+    }
 }
 
 /* Add table entry. Return value:
@@ -239,17 +241,17 @@ new_table(int key_size)
  *  +1 if key size must be incremented after this addition
  *  -1 if could not realloc table */
 static int
-add_entry(Table **tablep, uint16_t length, uint16_t prefix, uint8_t suffix)
+add_entry(gd_Table* table, uint16_t length, uint16_t prefix, uint8_t suffix)
 {
-    Table *table = *tablep;
-    if (table->nentries == table->bulk) {
-        table->bulk *= 2;
-        table = (Table*) realloc(table, sizeof(*table) + sizeof(Entry) * table->bulk);
-        if (!table) return -1;
-        table->entries = (Entry *) &table[1];
-        *tablep = table;
-    }
-    table->entries[table->nentries] = (Entry) {length, prefix, suffix};
+    // Table *table = *tablep;
+    // if (table->nentries == table->bulk) {
+    //     table->bulk *= 2;
+    //     table = (Table*) realloc(table, sizeof(*table) + sizeof(Entry) * table->bulk);
+    //     if (!table) return -1;
+    //     table->entries = (Entry *) &table[1];
+    //     *tablep = table;
+    // }
+    table->entries[table->nentries] = (gd_Entry) {length, prefix, suffix};
     table->nentries++;
     if ((table->nentries & (table->nentries - 1)) == 0)
         return 1;
@@ -315,8 +317,7 @@ read_image_data(gd_GIF *gif, int interlace)
     int frm_off, str_len, p, x, y;
     uint16_t key, clear, stop;
     int ret;
-    Table *table;
-    Entry entry;
+    gd_Entry entry;
     off_t start, end;
 
     // Serial.println("Read key size");
@@ -330,7 +331,8 @@ read_image_data(gd_GIF *gif, int interlace)
     clear = 1 << key_size;
     stop = clear + 1;
     // Serial.println("New LZW table");
-    table = new_table(key_size);
+    // table = new_table(key_size);
+    reset_table(gif->table, key_size);
     key_size++;
     init_key_size = key_size;
     sub_len = shift = 0;
@@ -342,17 +344,17 @@ read_image_data(gd_GIF *gif, int interlace)
         if (key == clear) {
             // Serial.println("Clear key, reset nentries");
             key_size = init_key_size;
-            table->nentries = (1 << (key_size - 1)) + 2;
+            gif->table->nentries = (1 << (key_size - 1)) + 2;
             table_is_full = 0;
         } else if (!table_is_full) {
             // Serial.println("Add entry to table");
-            ret = add_entry(&table, str_len + 1, key, entry.suffix);
-            if (ret == -1) {
-                // Serial.println("Table entry add failure");
-                free(table);
-                return -1;
-            }
-            if (table->nentries == 0x1000) {
+            ret = add_entry(gif->table, str_len + 1, key, entry.suffix);
+            // if (ret == -1) {
+            //     // Serial.println("Table entry add failure");
+            //     free(table);
+            //     return -1;
+            // }
+            if (gif->table->nentries == 0x1000) {
                 // Serial.println("Table is full");
                 ret = 0;
                 table_is_full = 1;
@@ -363,7 +365,7 @@ read_image_data(gd_GIF *gif, int interlace)
         if (key == clear) continue;
         if (key == stop) break;
         if (ret == 1) key_size++;
-        entry = table->entries[key];
+        entry = gif->table->entries[key];
         str_len = entry.length;
         // Serial.println("Interpret key");
         while (1) {
@@ -376,14 +378,14 @@ read_image_data(gd_GIF *gif, int interlace)
             if (entry.prefix == 0xFFF)
                 break;
             else
-                entry = table->entries[entry.prefix];
+                entry = gif->table->entries[entry.prefix];
         }
         frm_off += str_len;
-        if (key < table->nentries - 1 && !table_is_full)
-            table->entries[table->nentries - 1].suffix = entry.suffix;
+        if (key < gif->table->nentries - 1 && !table_is_full)
+            gif->table->entries[gif->table->nentries - 1].suffix = entry.suffix;
     }
     // Serial.println("Done w/ img data, free table and seek to end");
-    free(table);
+    // free(table);
     gif->fd->read(&sub_len, 1); /* Must be zero! */
     gif->fd->seek(end, SeekSet);
     return 0;
@@ -503,5 +505,6 @@ void
 gd_close_gif(gd_GIF *gif)
 {
     gif->fd->close();
+    free(gif->table);
     free(gif);
 }
