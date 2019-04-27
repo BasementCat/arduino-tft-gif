@@ -5,9 +5,15 @@
 // #include <sys/types.h>
 #include <SD.h>
 
+typedef struct gd_RGBColor {
+    uint8_t r;
+    uint8_t g;
+    uint8_t b;
+} gd_RGBColor;
+
 typedef struct gd_Palette {
     int size;
-    uint8_t colors[0x100 * 3];
+    uint16_t colors[256];
 } gd_Palette;
 
 typedef struct gd_GCE {
@@ -48,7 +54,8 @@ typedef struct gd_GIF {
     void (*application)(struct gd_GIF *gif, char id[8], char auth[3]);
     uint16_t fx, fy, fw, fh;
     uint8_t bgindex;
-    uint8_t *canvas, *frame;
+    uint16_t *canvas;
+    uint8_t *frame;
     gd_Table* table;
 } gd_GIF;
 
@@ -57,7 +64,7 @@ static gd_Table * new_table();
 static void reset_table(gd_Table* table, int key_size);
 // int add_entry(gd_Table* table, uint16_t length, uint16_t prefix, uint8_t suffix)
 int gd_get_frame(gd_GIF *gif);
-void gd_render_frame(gd_GIF *gif, uint8_t *buffer);
+void gd_render_frame(gd_GIF *gif, uint16_t *buffer);
 void gd_rewind(gd_GIF *gif);
 void gd_close_gif(gd_GIF *gif);
 

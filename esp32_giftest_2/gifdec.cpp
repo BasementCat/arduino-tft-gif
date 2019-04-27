@@ -24,6 +24,26 @@ read_num(File* fd)
     return bytes[0] + (((uint16_t) bytes[1]) << 8);
 }
 
+static uint16_t
+color565(gd_RGBColor c)
+{
+    return ((c.r & 0xF8) << 8) | ((c.g & 0xFC) << 3) | ((c.b & 0xF8) >> 3);
+}
+
+static void
+read_palette(File* fd, gd_Palette* dest, int num_colors)
+{
+    int bsize = sizeof(gd_RGBColor) * num_colors;
+    gd_RGBColor* buffer = (gd_RGBColor*) malloc(bsize);
+    fd->read((uint8_t*) buffer, bsize);
+    dest->size = num_colors;
+    for (int i = 0; i < num_colors; i++) {
+        dest->colors[i] = color565(buffer[i]);
+    }
+    free(buffer);
+    // Serial.println("read palette");
+}
+
 gd_GIF *
 gd_open_gif(File* fd)
 {
@@ -65,19 +85,18 @@ gd_open_gif(File* fd)
     /* Aspect Ratio */
     fd->read(&aspect, 1);
     /* Create gd_GIF Structure. */
-    gif = (gd_GIF*) calloc(1, sizeof(*gif) + 4 * width * height);
+    gif = (gd_GIF*) calloc(1, sizeof(*gif) + 3 * width * height);
     if (!gif) goto fail;
     gif->fd = fd;
     gif->width  = width;
     gif->height = height;
     gif->depth  = depth;
     /* Read GCT */
-    gif->gct.size = gct_sz;
-    fd->read(gif->gct.colors, 3 * gif->gct.size);
+    read_palette(fd, &gif->gct, gct_sz);
     gif->palette = &gif->gct;
     gif->bgindex = bgidx;
-    gif->canvas = (uint8_t *) &gif[1];
-    gif->frame = &gif->canvas[3 * width * height];
+    gif->canvas = (uint16_t *) &gif[1];
+    gif->frame = (uint8_t*) &gif->canvas[2 * width * height];
     if (gif->bgindex)
         memset(gif->frame, gif->bgindex, gif->width * gif->height);
     gif->anim_start = fd->position();
@@ -324,10 +343,10 @@ read_image_data(gd_GIF *gif, int interlace)
     gif->fd->read(&byte, 1);
     key_size = (int) byte;
     // Serial.println("Set pos, discard sub blocks");
-    start = gif->fd->position();
-    discard_sub_blocks(gif);
-    end = gif->fd->position();
-    gif->fd->seek(start, SeekSet);
+    // start = gif->fd->position();
+    // discard_sub_blocks(gif);
+    // end = gif->fd->position();
+    // gif->fd->seek(start, SeekSet);
     clear = 1 << key_size;
     stop = clear + 1;
     // Serial.println("New LZW table");
@@ -387,7 +406,7 @@ read_image_data(gd_GIF *gif, int interlace)
     // Serial.println("Done w/ img data, free table and seek to end");
     // free(table);
     gif->fd->read(&sub_len, 1); /* Must be zero! */
-    gif->fd->seek(end, SeekSet);
+    // gif->fd->seek(end, SeekSet);
     return 0;
 }
 
@@ -413,8 +432,7 @@ read_image(gd_GIF *gif)
     if (fisrz & 0x80) {
         /* Read LCT */
         // Serial.println("Read LCT");
-        gif->lct.size = 1 << ((fisrz & 0x07) + 1);
-        gif->fd->read(gif->lct.colors, 3 * gif->lct.size);
+        read_palette(gif->fd, &gif->lct, 1 << ((fisrz & 0x07) + 1));
         gif->palette = &gif->lct;
     } else
         gif->palette = &gif->gct;
@@ -424,7 +442,7 @@ read_image(gd_GIF *gif)
 }
 
 static void
-render_frame_rect(gd_GIF *gif, uint8_t *buffer)
+render_frame_rect(gd_GIF *gif, uint16_t *buffer)
 {
     int i, j, k;
     uint8_t index, *color;
@@ -432,9 +450,10 @@ render_frame_rect(gd_GIF *gif, uint8_t *buffer)
     for (j = 0; j < gif->fh; j++) {
         for (k = 0; k < gif->fw; k++) {
             index = gif->frame[(gif->fy + j) * gif->width + gif->fx + k];
-            color = &gif->palette->colors[index*3];
+            // color = &gif->palette->colors[index*2];
             if (!gif->gce.transparency || index != gif->gce.tindex)
-                memcpy(&buffer[(i+k)*3], color, 3);
+                buffer[(i+k)] = gif->palette->colors[index];
+                // memcpy(&buffer[(i+k)*2], color, 2);
         }
         i += gif->width;
     }
@@ -444,14 +463,15 @@ static void
 dispose(gd_GIF *gif)
 {
     int i, j, k;
-    uint8_t *bgcolor;
+    uint16_t bgcolor;
     switch (gif->gce.disposal) {
     case 2: /* Restore to background color. */
-        bgcolor = &gif->palette->colors[gif->bgindex*3];
+        bgcolor = gif->palette->colors[gif->bgindex];
         i = gif->fy * gif->width + gif->fx;
         for (j = 0; j < gif->fh; j++) {
             for (k = 0; k < gif->fw; k++)
-                memcpy(&gif->canvas[(i+k)*3], bgcolor, 3);
+                gif->canvas[i+k] = bgcolor;
+                // memcpy(&gif->canvas[(i+k)*3], bgcolor, 3);
             i += gif->width;
         }
         break;
@@ -489,9 +509,11 @@ gd_get_frame(gd_GIF *gif)
 }
 
 void
-gd_render_frame(gd_GIF *gif, uint8_t *buffer)
+gd_render_frame(gd_GIF *gif, uint16_t *buffer)
 {
-    memcpy(buffer, gif->canvas, gif->width * gif->height * 3);
+    // Serial.println("Copy canvas to buffer");
+    memcpy(buffer, gif->canvas, gif->width * gif->height * 2);
+    // Serial.println("render frame to buffer");
     render_frame_rect(gif, buffer);
 }
 

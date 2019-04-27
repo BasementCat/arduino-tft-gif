@@ -19,15 +19,15 @@
 
 #define DISPLAY_TIME_SECONDS 10
 
-typedef struct {
-    uint8_t r;
-    uint8_t g;
-    uint8_t b;
-} colortype;
+// typedef struct {
+//     uint8_t r;
+//     uint8_t g;
+//     uint8_t b;
+// } colortype;
 
 Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS,  TFT_DC, TFT_RST);
 
-#define FILENAME "/128_commscafedragon_by_metallicumbrage-dcv6bo5.gif"
+#define FILENAME "/128_nyancat.gif"
 #define MIN(A, B) ((A) < (B) ? (A) : (B))
 #define MAX(A, B) ((A) > (B) ? (A) : (B))
 
@@ -57,11 +57,6 @@ void setup() {
 }
 
 
-uint16_t color565(colortype c) {
-    return ((c.r & 0xF8) << 8) | ((c.g & 0xFC) << 3) | ((c.b & 0xF8) >> 3);
-}
-
-
 void loop() {
     File fp;
     fp = SD.open(FILENAME);
@@ -69,15 +64,18 @@ void loop() {
         die("Failed to open file");
     }
 
+    int t_fstart=0, t_delay=0, t_real_delay;
+
     // Serial.println("Open gif");
     gd_GIF *gif = gd_open_gif(&fp);
     int res;
     // Serial.println("Alloc buffer");
-    colortype *buffer = (colortype*) malloc(gif->width * gif->height * 3);
+    // colortype *buffer = (colortype*) malloc(gif->width * gif->height * 3);
     // Serial.println("Loop start");
     for (unsigned looped = 1;; looped++) {
         // Serial.println("Loop frames");
         while (1) {
+            t_delay = gif->gce.delay * 10;
             res = gd_get_frame(gif);
             if (res < 0) {
                 die("failure");
@@ -85,15 +83,20 @@ void loop() {
                 break;
             }
             // Serial.println("Got frame, rendering");
-            gd_render_frame(gif, (uint8_t*) buffer);
+            gd_render_frame(gif, screen);
             // Serial.println("Copy to screen");
-            for (int i = 0; i < gif->width * gif->height; i++) {
-                screen[i] = color565(buffer[i]);
-            }
+            // for (int i = 0; i < gif->width * gif->height; i++) {
+            //     screen[i] = color565(buffer[i]);
+            // }
             // Serial.println("Render to tft");
+            t_real_delay = t_delay - (millis() - t_fstart);
+            if (t_real_delay > 0)
+                delay(t_real_delay);
+
             tft.startWrite();
             tft.writePixels(screen, 16384);
             tft.endWrite();
+            t_fstart = millis();
         }
         if (looped == gif->loop_count)
             break;
@@ -101,7 +104,7 @@ void loop() {
         gd_rewind(gif);
     }
     // Serial.println("Clear buffer, close file");
-    free(buffer);
+    // free(buffer);
     gd_close_gif(gif);
 }
 
