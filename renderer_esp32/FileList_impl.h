@@ -104,8 +104,8 @@ class FileList {
             }
 
             filename_string.toUpperCase();
-            if (filename_string.endsWith(".ANIM") != 1) {
-                Serial.println(" ignoring: doesn't end with .ANIM");
+            if (filename_string.endsWith(".GIF") != 1) {
+                Serial.println(" ignoring: doesn't end with .GIF");
                 return false;
             }
 

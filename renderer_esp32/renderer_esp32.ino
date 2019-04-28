@@ -1,11 +1,9 @@
 #include <Adafruit_ST7735.h> // Hardware-specific library for ST7735
 #include <SD.h>
-// #include "GifDecoder.h"
-// #include "FilenameFunctions.h"
 #include "Buttons_impl.h"
 #include "Menu_impl.h"
 #include "FileList_impl.h"
-#include "Animation_impl.h"
+#include "gifdec.h"
 
 // Definitions of pin numbers for the TFT
 // SPI pins are hardware and do not need to be defined
@@ -22,12 +20,12 @@
 #define BTN_R   26
 
 #define DISPLAY_TIME_SECONDS 10
-#define ANIM_DIRECTORY "/anim"
+#define GIFS_DIRECTORY "/"
 
 
 Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS,  TFT_DC, TFT_RST);
 Buttons buttons = Buttons(BTN_L, BTN_M, BTN_R);
-FileList files = FileList(ANIM_DIRECTORY);
+FileList files = FileList(GIFS_DIRECTORY);
 
 uint16_t screen[16384];
 
@@ -62,30 +60,45 @@ void setup() {
 
 void loop() {
     File fp;
+    int t_fstart=0, t_delay=0, t_real_delay, res, next_time;
+    next_time = millis() + (DISPLAY_TIME_SECONDS * 1000);
+
     fp = SD.open(files.get_cur_file());
     if (!fp) {
-        die("Failed to open file");
-    }
-
-    Animation anim = Animation(&tft, &fp, screen);
-    if (anim.errstr) {
-        // die(anim.errstr);
         files.next_file();
         return;
     }
 
-    int next_time = millis() + (DISPLAY_TIME_SECONDS * 1000);
+    gd_GIF *gif = gd_open_gif(&fp);
+    if (!gif) {
+        files.next_file();
+        return;
+    }
+
     while (1) {
-        // Serial.println("read frame");
-        if (anim.read_frame()) {
-            // Serial.println("end of frames, rewind, continue");
-            anim.rewind();
+        t_delay = gif->gce.delay * 10;
+        res = gd_get_frame(gif);
+        if (res < 0) {
+            die("failure");
+        } else if (res == 0) {
+            gd_rewind(gif);
+            t_fstart = 0;
             continue;
         }
-        // Serial.println("render frame");
-        anim.render_frame();
-        // Serial.println("delay frame");
-        anim.delay_frame();
+        gd_render_frame(gif, screen);
+        t_real_delay = t_delay - (millis() - t_fstart);
+        if (t_real_delay > 0)
+            delay(t_real_delay);
+
+        tft.startWrite();
+        tft.writePixels(screen, 16384);
+        tft.endWrite();
+        t_fstart = millis();
+
+        if (millis() >= next_time) {
+            files.next_file();
+            break;
+        }
 
         buttons.check();
         if (buttons.l_btn()) {
@@ -96,49 +109,12 @@ void loop() {
             files.next_file();
             break;
         }
-        // if (buttons.m_btn()) {
-        //     main_menu();
-        // }
-        if (millis() >= next_time) {
-            files.next_file();
-            break;
+        if (buttons.m_btn()) {
+            main_menu();
         }
     }
 
-    fp.close();
-    // static unsigned long futureTime;
-    // static int change_gif = 0;
-
-    // change_gif = change_gif ?: (futureTime < millis() ? 1 : 0);
-    // if(change_gif != 0) {
-    //     gifindex += change_gif;
-    //     if (gifindex < 0) gifindex = num_files - 1;
-    //     if (gifindex >= num_files) gifindex = 0;
-    //     change_gif = 0;
-
-    //     char pathname[128];
-
-    //     getGIFFilenameByIndex(GIF_DIRECTORY, gifindex, pathname);
-
-    //     if (decoder.openGifFilename(pathname) == 0) {
-    //         decoder.startDecoding();
-    //         futureTime = millis() + (DISPLAY_TIME_SECONDS * 1000);
-    //     }
-
-    //     // if (openGifFilenameByIndex(GIF_DIRECTORY, gifindex) >= 0) {
-    //     //     // Can clear screen for new animation here, but this might cause flicker with short animations
-    //     //     // matrix.fillScreen(COLOR_BLACK);
-    //     //     // matrix.swapBuffers();
-
-    //     //     decoder.startDecoding();
-
-    //     //     // Calculate time in the future to terminate animation
-    //     //     futureTime = millis() + (DISPLAY_TIME_SECONDS * 1000);
-    //     // }
-    // }
-
-    // decoder.decodeFrame();
-
+    gd_close_gif(gif);
 }
 
 void main_menu() {
