@@ -58,8 +58,8 @@ void setup() {
     }
     Serial.println("OK!");
 
-    files.init();
     read_prefs(&prefs);
+    files.init(&prefs);
 }
 
 void loop() {
@@ -69,13 +69,13 @@ void loop() {
 
     fp = SD.open(files.get_cur_file());
     if (!fp) {
-        files.next_file();
+        files.next_file(&prefs);
         return;
     }
 
     gd_GIF *gif = gd_open_gif(&fp);
     if (!gif) {
-        files.next_file();
+        files.next_file(&prefs);
         return;
     }
 
@@ -95,11 +95,11 @@ void loop() {
         do {
             buttons.check();
             if (buttons.l_btn()) {
-                files.prev_file();
+                files.prev_file(&prefs);
                 goto end_loop;
             }
             if (buttons.r_btn()) {
-                files.next_file();
+                files.next_file(&prefs);
                 goto end_loop;
             }
             if (buttons.m_btn()) {
@@ -113,7 +113,7 @@ void loop() {
         t_fstart = millis();
 
         if (prefs.display_time_s < 1000 && millis() >= next_time) {
-            files.next_file();
+            files.next_file(&prefs);
             goto end_loop;
         }
     }

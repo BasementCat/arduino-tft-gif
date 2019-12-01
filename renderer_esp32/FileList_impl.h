@@ -2,12 +2,17 @@
 #define FILELIST_IMPL_H
 
 #include <SD.h>
+#include "prefs.h"
 
 class FileList {
     public:
         FileList(const char* directory) {
             this->directory = directory;
             // this->read_num_files(0, true);
+        }
+
+        void init(Prefs* prefs) {
+            this->read_num_files(0, true, prefs->last_filename);
         }
 
         void init() {
@@ -30,12 +35,12 @@ class FileList {
             this->read_num_files(index, true);
         }
 
-        void next_file() {
-            this->read_num_files(this->index + 1, true);
+        void next_file(Prefs* prefs) {
+            this->change_file(prefs, 1, true);
         }
 
-        void prev_file() {
-            this->read_num_files(this->index - 1, true);
+        void prev_file(Prefs* prefs) {
+            this->change_file(prefs, -1, true);
         }
 
     private:
@@ -43,7 +48,15 @@ class FileList {
         char filename[128];
         int num_files = 0, index = 0;
 
-        void read_num_files(int index, bool set_index) {
+        void change_file(Prefs* prefs, int dir, bool set_index) {
+            this->read_num_files(this->index + dir, set_index);
+            if (prefs != NULL) {
+                set_pref_last_filename(prefs, (const char *)this->filename);
+                write_prefs(prefs);
+            }
+        }
+
+        void read_num_files(int index, bool set_index, char* last_filename) {
             int count = 0, curindex = -1;
 
             if (set_index) {
@@ -64,7 +77,7 @@ class FileList {
                 if (this->is_anim_file(file.name())) {
                     count++;
                     curindex++;
-                    if (set_index && index == curindex) {
+                    if (set_index && ((last_filename != NULL && strcmp((char*)file.name(), last_filename) == 0 || (last_filename == NULL && index == curindex)))) {
                         this->index = curindex;
 #if !defined(ESP32)
                         // Copy the directory name into the pathname buffer - ESP32 SD Library includes the full path name in the filename, so no need to add the directory name
@@ -84,6 +97,10 @@ class FileList {
             directory.close();
 
             this->num_files = count;
+        }
+
+        void read_num_files(int index, bool set_index) {
+            this->read_num_files(index, set_index, NULL);
         }
 
         bool is_anim_file(const char* filename) {

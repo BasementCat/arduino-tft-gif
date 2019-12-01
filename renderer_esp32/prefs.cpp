@@ -2,19 +2,12 @@
 #include "prefs.h"
 
 void set_pref_last_filename(Prefs* prefs, const char* filename) {
-    if (prefs->last_filename != NULL) {
-        prefs->last_filename_len = 0;
-        free(prefs->last_filename);
-        prefs->last_filename = NULL;
-    }
+    prefs->last_filename[0] = 0;
 
     if (filename == NULL)
         return;
 
-    prefs->last_filename_len = strlen(filename);
-    prefs->last_filename = (char*)malloc(prefs->last_filename_len + 1);
-    strncpy(prefs->last_filename, filename, prefs->last_filename_len);
-    prefs->last_filename[prefs->last_filename_len] = '\0';
+    strcpy(prefs->last_filename, filename);
 }
 
 void write_prefs(Prefs* prefs) {
@@ -27,23 +20,18 @@ void write_prefs(Prefs* prefs) {
     }
 
     prefs->version = PREFS_VERSION;
-    file.write((uint8_t*)&prefs->version, 2);
-    file.write((uint8_t*)&prefs->display_time_s, 2);
-    file.write((uint8_t*)&prefs->last_filename_len, 2);
-    if (prefs->last_filename_len > 0) {
-        file.write((uint8_t*)&prefs->last_filename, prefs->last_filename_len);
-    }
-
+    file.write((uint8_t*)prefs, sizeof(Prefs));
     file.close();
 }
 
 void read_prefs(Prefs* prefs) {
     File file;
+    uint16_t version;
 
     prefs->version = PREFS_VERSION;
     prefs->display_time_s = 10;
-    prefs->last_filename_len = 0;
-    prefs->last_filename = NULL;
+    // prefs->last_filename_len = 0;
+    prefs->last_filename[0] = 0;
 
     file = SD.open(PREFS_FILENAME);
     if (!file) {
@@ -51,15 +39,17 @@ void read_prefs(Prefs* prefs) {
         return;
     }
 
-    file.read((uint8_t*)&prefs->version, 2);
-    if (prefs->version >= 1) {
-        file.read((uint8_t*)&prefs->display_time_s, 2);
-        file.read((uint8_t*)&prefs->last_filename_len, 2);
-        if (prefs->last_filename_len > 0) {
-            prefs->last_filename = (char*)malloc(prefs->last_filename_len + 1);
-            file.read((uint8_t*)prefs->last_filename, prefs->last_filename_len);
-            prefs->last_filename[prefs->last_filename_len] = '\0';
-        }
+    file.read((uint8_t*) &version, 2);
+    if (version != 1) {
+        Serial.print("Invalid prefs version, expected ");
+        Serial.print(PREFS_VERSION);
+        Serial.print(", got ");
+        Serial.println(version);
+        file.close();
+        return;
     }
+    file.seek(0);
+
+    file.read((uint8_t*)prefs, sizeof(Prefs));
     file.close();
 }

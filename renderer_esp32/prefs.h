@@ -9,9 +9,8 @@
 typedef struct {
     uint16_t version;
     uint16_t display_time_s;
-    uint16_t last_filename_len;
-    char* last_filename;
-} Prefs;
+    char last_filename[128];
+} __attribute__ ((packed)) Prefs;
 
 void set_pref_last_filename(Prefs* prefs, const char* filename);
 void write_prefs(Prefs* prefs);
