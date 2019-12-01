@@ -3,8 +3,24 @@
 #include "Menu_impl.h"
 #include "prefs.h"
 #include "version.h"
+#include "battery.h"
 #include "menus.h"
 
+
+void battery_menu(Adafruit_ST7735* tft, Buttons* buttons) {
+    MenuRenderer m = MenuRenderer(tft, buttons);
+    char voltage[7], percent[4];
+    dtostrf(read_battery_voltage(), 5, 3, voltage);
+    strcat(voltage, "v");
+    itoa(read_battery_percent(), percent, 10);
+    strcat(percent, "%");
+    const char * text[3] = {
+        "Back",
+        voltage,
+        percent
+    };
+    m.render((const char **)text, 3);
+}
 
 void version_menu(Adafruit_ST7735* tft, Buttons* buttons) {
     MenuRenderer m = MenuRenderer(tft, buttons);
@@ -19,6 +35,7 @@ void system_menu(Adafruit_ST7735* tft, Buttons* buttons) {
     MenuRenderer m = MenuRenderer(tft, buttons);
     const char * text[] = {
         "Back",
+        "Battery",
         "Version",
         "Update From SD"
     };
@@ -27,9 +44,12 @@ void system_menu(Adafruit_ST7735* tft, Buttons* buttons) {
             case 0:
                 return;
             case 1:
-                version_menu(tft, buttons);
+                battery_menu(tft, buttons);
                 break;
             case 2:
+                version_menu(tft, buttons);
+                break;
+            case 3:
                 break;
         }
     }

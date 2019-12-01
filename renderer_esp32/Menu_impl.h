@@ -126,8 +126,6 @@ class MenuRenderer {
         }
 
         int render_text(int y_offset, MenuItem* item) {
-            // TODO: render only portion of string that would not overflow screen
-            // TODO: allow to step through the string and "scroll" it to show the entire string over time
             int16_t x1, y1;
             uint16_t w, h;
             int max_w = width - (margin * 2);
