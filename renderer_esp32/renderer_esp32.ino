@@ -14,8 +14,10 @@
 #define TFT_RST 27  // TFT reset line
 #define TFT_DC  33  // TFT data/command line
 #define SD_CS   15  // SD chip select line
-// Unused for now
-// #define TFT_BL  99  // TFT backlight PWM line
+// Backlight
+#define TFT_BL  32  // TFT backlight PWM line
+#define TFT_BL_FREQ 120
+#define TFT_BL_CHAN 0
 
 // Buttons - will use these later
 #define BTN_L   4
@@ -42,6 +44,10 @@ void setup() {
     digitalWrite(TFT_CS, HIGH);
     pinMode(SD_CS, OUTPUT);
     digitalWrite(SD_CS, HIGH);
+    // backlight is different
+    ledcSetup(TFT_BL_CHAN, TFT_BL_FREQ, 8);
+    ledcAttachPin(TFT_BL, TFT_BL_CHAN);
+    ledcWrite(TFT_BL_CHAN, 255);
 
     SPI.beginTransaction(SPISettings(40000000, MSBFIRST, SPI_MODE0));
     SPI.setClockDivider(2);
@@ -60,6 +66,8 @@ void setup() {
 
     read_prefs(&prefs);
     files.init(&prefs);
+
+    ledcWrite(TFT_BL_CHAN, prefs.brightness);
 }
 
 void loop() {
@@ -104,6 +112,7 @@ void loop() {
             }
             if (buttons.m_btn()) {
                 main_menu(&tft, &buttons, &prefs);
+                ledcWrite(TFT_BL_CHAN, prefs.brightness);
             }
         } while (millis() < delay_until);
 
