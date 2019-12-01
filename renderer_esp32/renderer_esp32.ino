@@ -3,7 +3,7 @@
 #include "Buttons_impl.h"
 #include "Menu_impl.h"
 #include "FileList_impl.h"
-#include "Prefs_impl.h"
+#include "prefs.h"
 #include "gifdec.h"
 #include "menus.h"
 #include "version.h"
@@ -28,6 +28,7 @@
 Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS,  TFT_DC, TFT_RST);
 Buttons buttons = Buttons(BTN_L, BTN_M, BTN_R);
 FileList files = FileList(GIFS_DIRECTORY);
+Prefs prefs;
 
 uint16_t screen[16384];
 
@@ -58,7 +59,7 @@ void setup() {
     Serial.println("OK!");
 
     files.init();
-    read_prefs();
+    read_prefs(&prefs);
 }
 
 void loop() {
@@ -102,7 +103,7 @@ void loop() {
                 goto end_loop;
             }
             if (buttons.m_btn()) {
-                main_menu(&tft, &buttons);
+                main_menu(&tft, &buttons, &prefs);
             }
         } while (millis() < delay_until);
 
@@ -111,7 +112,7 @@ void loop() {
         tft.endWrite();
         t_fstart = millis();
 
-        if (millis() >= next_time) {
+        if (prefs.display_time_s < 1000 && millis() >= next_time) {
             files.next_file();
             goto end_loop;
         }

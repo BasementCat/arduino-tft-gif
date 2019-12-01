@@ -1,6 +1,7 @@
 #include <Adafruit_ST7735.h>
 #include "Buttons_impl.h"
 #include "Menu_impl.h"
+#include "prefs.h"
 #include "version.h"
 #include "menus.h"
 
@@ -68,30 +69,29 @@ uint16_t prefs_disp_time_menu(Adafruit_ST7735* tft, Buttons* buttons) {
     }
 }
 
-// void preferences_menu(Adafruit_ST7735* tft, Buttons* buttons) {
-//     MenuRenderer m = MenuRenderer(tft, buttons);
-//     uint16_t disp_time;
-//     const char * text[] = {
-//         "Back",
-//         "Display Time"
-//     };
-//     while (1) {
-//         switch (m.render((const char **)text, 2)) {
-//             case 0:
-//                 return;
-//             case 1:
-//                 disp_time = prefs_disp_time_menu(tft, buttons);
-//                 if (disp_time > 0) {
-//                     read_prefs();
-//                     prefs.display_time_s = disp_time;
-//                     write_prefs();
-//                 }
-//                 break;
-//         }
-//     }
-// }
+void preferences_menu(Adafruit_ST7735* tft, Buttons* buttons, Prefs* prefs) {
+    MenuRenderer m = MenuRenderer(tft, buttons);
+    uint16_t disp_time;
+    const char * text[] = {
+        "Back",
+        "Display Time"
+    };
+    while (1) {
+        switch (m.render((const char **)text, 2)) {
+            case 0:
+                return;
+            case 1:
+                disp_time = prefs_disp_time_menu(tft, buttons);
+                if (disp_time > 0) {
+                    prefs->display_time_s = disp_time;
+                    write_prefs(prefs);
+                }
+                break;
+        }
+    }
+}
 
-void main_menu(Adafruit_ST7735* tft, Buttons* buttons) {
+void main_menu(Adafruit_ST7735* tft, Buttons* buttons, Prefs* prefs) {
     MenuRenderer m = MenuRenderer(tft, buttons);
     const char * text[] = {
         "Back",
@@ -116,9 +116,9 @@ void main_menu(Adafruit_ST7735* tft, Buttons* buttons) {
         switch (m.render((const char **)text, 3)) {
             case 0:
                 return;
-            // case 1:
-            //     preferences_menu(tft, buttons);
-            //     break;
+            case 1:
+                preferences_menu(tft, buttons, prefs);
+                break;
             case 2:
                 system_menu(tft, buttons);
                 break;
