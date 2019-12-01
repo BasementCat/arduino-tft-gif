@@ -1,6 +1,10 @@
 #include <Adafruit_ST7735.h>
 #include "Buttons_impl.h"
 
+// Needed here too
+#define MIN(A, B) ((A) < (B) ? (A) : (B))
+#define MAX(A, B) ((A) > (B) ? (A) : (B))
+
 
 typedef struct {
     const char* text;
@@ -19,8 +23,11 @@ class MenuRenderer {
         }
 
         int render(const char** items_text, int item_count) {
+            if (item_count < 1)
+                return -1;
+
             MenuItem items[item_count];
-            int i, y_offset;
+            int i, y_offset, max_items_rendered, item_offset=0;
             uint32_t next_render;
             bool selection_changed = true;
 
@@ -41,9 +48,15 @@ class MenuRenderer {
                 calc_size(&items[i]);
             }
 
+            max_items_rendered = ((this->height - ((this->margin * 2) + this->top_offset + this->btm_offset)) / (items[0].height + 2));
+            Serial.println(max_items_rendered);
+
             while (true) {
                 y_offset = margin + top_offset;
-                for (i = 0; i < item_count; i++) {
+                for (i = item_offset; i < item_count; i++) {
+                    if (i >= (max_items_rendered + item_offset))
+                        break;
+
                     if (selection_changed) {
                         tft->fillRect(margin - 1, y_offset, (width - margin) - 1, items[i].height, items[i].selected ? color : 0);
                     }
@@ -59,6 +72,8 @@ class MenuRenderer {
                                 if (i > 0) {
                                     items[i].selected = false;
                                     items[i - 1].selected = true;
+                                    if (i - 1 < item_offset)
+                                        item_offset = MAX(0, item_offset - 1);
                                     break;
                                 }
                             }
@@ -72,6 +87,8 @@ class MenuRenderer {
                                 if (i + 1 < item_count) {
                                     items[i].selected = false;
                                     items[i + 1].selected = true;
+                                    if (i + 1 >= max_items_rendered + item_offset)
+                                        item_offset = MIN(item_count, item_offset + 1);
                                     break;
                                 }
                             }

@@ -51,7 +51,7 @@ void write_prefs() {
 void read_prefs() {
     File file;
 
-    prefs.version = PREFS_VERSION
+    prefs.version = PREFS_VERSION;
     prefs.display_time_s = 10;
     prefs.last_filename_len = 0;
     prefs.last_filename = NULL;
@@ -62,7 +62,7 @@ void read_prefs() {
         return;
     }
 
-    file.read((uint16_t*)&prefs.version, 2);
+    file.read((uint8_t*)&prefs.version, 2);
     if (prefs.version >= 1) {
         file.read((uint8_t*)&prefs.display_time_s, 2);
         file.read((uint8_t*)&prefs.last_filename_len, 2);

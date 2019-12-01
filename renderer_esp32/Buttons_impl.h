@@ -1,7 +1,7 @@
 #ifndef _BUTTONS_IMPL_H_
 #define _BUTTONS_IMPL_H_
 
-// #define SET_TIME 10
+#define SET_TIME 10
 #define READ_TIME 250
 
 class Buttons {
@@ -32,7 +32,7 @@ class Buttons {
         }
 
         bool l_btn() {
-            if (l_set && !l_read) {
+            if (l_set && !l_read && millis() - l_set > SET_TIME) {
                 l_read = now;
                 return true;
             }
@@ -40,7 +40,7 @@ class Buttons {
         }
 
         bool m_btn() {
-            if (m_set && !m_read) {
+            if (m_set && !m_read && millis() - m_set > SET_TIME) {
                 m_read = now;
                 return true;
             }
@@ -48,7 +48,7 @@ class Buttons {
         }
 
         bool r_btn() {
-            if (r_set && !r_read) {
+            if (r_set && !r_read && millis() - r_set > SET_TIME) {
                 r_read = now;
                 return true;
             }

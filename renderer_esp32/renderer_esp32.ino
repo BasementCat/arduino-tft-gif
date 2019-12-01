@@ -3,7 +3,10 @@
 #include "Buttons_impl.h"
 #include "Menu_impl.h"
 #include "FileList_impl.h"
+#include "Prefs_impl.h"
 #include "gifdec.h"
+#include "menus.h"
+#include "version.h"
 
 // Definitions of pin numbers for the TFT
 // SPI pins are hardware and do not need to be defined
@@ -19,7 +22,6 @@
 #define BTN_M   25
 #define BTN_R   26
 
-#define DISPLAY_TIME_SECONDS 10
 #define GIFS_DIRECTORY "/"
 
 
@@ -56,12 +58,13 @@ void setup() {
     Serial.println("OK!");
 
     files.init();
+    read_prefs();
 }
 
 void loop() {
     File fp;
-    int t_fstart=0, t_delay=0, t_real_delay, res, next_time;
-    next_time = millis() + (DISPLAY_TIME_SECONDS * 1000);
+    int t_fstart=0, t_delay=0, t_real_delay, res, next_time, delay_until;
+    next_time = millis() + (prefs.display_time_s * 1000);
 
     fp = SD.open(files.get_cur_file());
     if (!fp) {
@@ -87,8 +90,21 @@ void loop() {
         }
         gd_render_frame(gif, screen);
         t_real_delay = t_delay - (millis() - t_fstart);
-        if (t_real_delay > 0)
-            delay(t_real_delay);
+        delay_until = millis() + t_real_delay;
+        do {
+            buttons.check();
+            if (buttons.l_btn()) {
+                files.prev_file();
+                goto end_loop;
+            }
+            if (buttons.r_btn()) {
+                files.next_file();
+                goto end_loop;
+            }
+            if (buttons.m_btn()) {
+                main_menu(&tft, &buttons);
+            }
+        } while (millis() < delay_until);
 
         tft.startWrite();
         tft.writePixels(screen, 16384);
@@ -97,35 +113,13 @@ void loop() {
 
         if (millis() >= next_time) {
             files.next_file();
-            break;
-        }
-
-        buttons.check();
-        if (buttons.l_btn()) {
-            files.prev_file();
-            break;
-        }
-        if (buttons.r_btn()) {
-            files.next_file();
-            break;
-        }
-        if (buttons.m_btn()) {
-            main_menu();
+            goto end_loop;
         }
     }
 
-    gd_close_gif(gif);
-}
+end_loop:
 
-void main_menu() {
-    MenuRenderer m = MenuRenderer(&tft, &buttons);
-    const char * text[] = {
-        "First entry",
-        "Second entry",
-        "Third entry",
-        "Fourth really super long entry that won't fit",
-    };
-    Serial.println(m.render((const char **)text, 4));
+    gd_close_gif(gif);
 }
 
 
