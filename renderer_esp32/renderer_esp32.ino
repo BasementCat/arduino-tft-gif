@@ -57,10 +57,14 @@ void setup() {
 
     tft.fillScreen(ST77XX_BLUE);
 
+    start_sd:
+
     Serial.print("Initializing SD card...");
     if (!SD.begin(SD_CS)) {
         Serial.println("failed!");
-        die("Failed to initialize SD card");
+        die("Failed to initialize SD card", false);
+        delay(1000);
+        goto start_sd;
     }
     Serial.println("OK!");
 
@@ -134,6 +138,11 @@ end_loop:
 
 
 void die(const char *message) {
+    die(message, false);
+}
+
+
+void die(const char *message, bool dont_die) {
     tft.fillScreen(ST77XX_BLACK);
 
     tft.setTextWrap(true);
@@ -147,5 +156,5 @@ void die(const char *message) {
     tft.setTextColor(0xffff);
     tft.setTextSize(1);
     tft.println(message);
-    while (true) delay(1000);
+    while (!dont_die) delay(1000);
 }
