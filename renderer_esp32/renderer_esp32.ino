@@ -55,14 +55,17 @@ void setup() {
     // For 0.96", 1.44" and 1.8" TFT with ST7735 use
     tft.initR(INITR_144GREENTAB);
 
-    tft.fillScreen(ST77XX_BLUE);
+    // The display is upside down in the final product
+    tft.setRotation(2);
 
     start_sd:
+    tft.fillScreen(ST77XX_BLUE);
 
     Serial.print("Initializing SD card...");
     if (!SD.begin(SD_CS)) {
         Serial.println("failed!");
-        die("Failed to initialize SD card", false);
+        tft.fillScreen(ST77XX_RED);
+        // die("Failed to initialize SD card", false);
         delay(1000);
         goto start_sd;
     }
@@ -122,6 +125,11 @@ void loop() {
 
         tft.startWrite();
         tft.writePixels(screen, 16384);
+        // for (int y = 127; y >= 0; y--) {
+        //     for (int x = 127; x >= 0; x--) {
+        //         tft.writePixels(screen + (y * 128) + x, 1);
+        //     }
+        // }
         tft.endWrite();
         t_fstart = millis();
 
